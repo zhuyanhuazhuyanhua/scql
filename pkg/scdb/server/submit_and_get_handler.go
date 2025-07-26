@@ -96,6 +96,21 @@ func (app *App) submitAndGet(ctx context.Context, req *scql.SCDBQueryRequest) *s
 		return newErrorSCDBQueryResultResponse(scql.Code_UNAUTHENTICATED, err.Error())
 	}
 
+	if req.Explain {
+		// Execute EXPLAIN statement
+		plan, err := getExecutionPlan(ctx, session)
+		if err != nil {
+			return newErrorSCDBQueryResultResponse(scql.Code_EXPLAIN_ERROR, err.Error())
+		}
+		return &scql.SCDBQueryResultResponse{
+			Status: &scql.Status{
+				Code:    int32(scql.Code_OK),
+				Message: "Explain executed successfully",
+			},
+			Explain: plan,
+		}
+	}
+
 	isDQL, err := isDQL(req.Query)
 	if err != nil {
 		return newErrorSCDBQueryResultResponse(scql.Code_SQL_PARSE_ERROR, err.Error())
@@ -107,6 +122,26 @@ func (app *App) submitAndGet(ctx context.Context, req *scql.SCDBQueryRequest) *s
 	}
 	app.runSQL(session)
 	return session.result
+}
+
+// getExecutionPlan 获取执行计划的 Graphviz DOT 表示
+func getExecutionPlan(ctx context.Context, session *Session) (string, error) {
+	// 这里需要实现获取执行图的逻辑，可能需要调用 broker 的 ExplainQuery 接口
+	// 示例代码，假设调用 broker 的 ExplainQuery 接口
+	explainReq := &pb.ExplainQueryRequest{
+		ProjectId: session.ProjectID,
+		Query:     session.Query,
+		JobConfig: session.JobConfig,
+	}
+	explainResp, err := session.App.BrokerClient.ExplainQuery(ctx, explainReq)
+	if err != nil {
+		return "", err
+	}
+	if explainResp.Status.Code != int32(pb.Code_OK) {
+		return "", fmt.Errorf("ExplainQuery failed: %s", explainResp.Status.Message)
+	}
+	// 假设 explainResp.Explain 已经是 Graphviz DOT 格式
+	return explainResp.Explain, nil
 }
 
 func (app *App) buildCompileRequest(ctx context.Context, s *session) (*scql.CompileQueryRequest, error) {

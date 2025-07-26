@@ -97,6 +97,8 @@ message SCDBQueryRequest {
 
   // Current database name
   string db_name = 6;
+  // Indicates whether to execute an EXPLAIN statement and return the execution graph in Graphviz DOT format.
+  bool explain = 7;
 }
 
 message SCDBSubmitResponse {
