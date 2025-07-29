@@ -128,6 +128,7 @@ message SCDBQueryResultResponse {
   int64 affected_rows = 4;
   // Warnings for the query
   repeated SQLWarning warnings = 5;
+  string explain = 6;
 }
 
 message User {
