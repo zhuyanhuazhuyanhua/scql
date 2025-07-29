@@ -84,7 +84,7 @@ func (app *App) SubmitAndGetHandler(c *gin.Context) {
 }
 
 // submitAndGet implements core logic of SubmitAndGetHandler
-func (app *App) submitAndGet(ctx context.Context, req *scql.SCDBQueryRequest) *scql.SCDBQueryResultResponse {
+func (app *App) submitAndGet(ctx context.Context, svc *intra.grpcIntraSvc, req *scql.SCDBQueryRequest) *scql.SCDBQueryResultResponse {
 	session, err := newSession(ctx, req, app.storage)
 	if err != nil {
 		return newErrorSCDBQueryResultResponse(scql.Code_INTERNAL, err.Error())
@@ -125,19 +125,19 @@ func (app *App) submitAndGet(ctx context.Context, req *scql.SCDBQueryRequest) *s
 }
 
 // getExecutionPlan 获取执行计划的 Graphviz DOT 表示
-func getExecutionPlan(ctx context.Context, session *Session) (string, error) {
+func getExecutionPlan(ctx context.Context, s *session) (string, error) {
 	// 这里需要实现获取执行图的逻辑，可能需要调用 broker 的 ExplainQuery 接口
 	// 示例代码，假设调用 broker 的 ExplainQuery 接口
-	explainReq := &pb.ExplainQueryRequest{
-		ProjectId: session.ProjectID,
-		Query:     session.Query,
-		JobConfig: session.JobConfig,
+	explainReq := &scql.ExplainQueryRequest{
+		ProjectId: s.request.DbName,
+		Query:     s.request.Query,
+		JobConfig: nil,
 	}
-	explainResp, err := session.App.BrokerClient.ExplainQuery(ctx, explainReq)
+	explainResp, err := svc.ExplainQuery(ctx, explainReq)
 	if err != nil {
 		return "", err
 	}
-	if explainResp.Status.Code != int32(pb.Code_OK) {
+	if explainResp.Status.Code != int32(scql.Code_OK) {
 		return "", fmt.Errorf("ExplainQuery failed: %s", explainResp.Status.Message)
 	}
 	// 假设 explainResp.Explain 已经是 Graphviz DOT 格式
